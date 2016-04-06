@@ -9,7 +9,7 @@ import java.net.*;
 
 public class Client {
 
-	Socket request;
+    Socket request;
     ObjectOutputStream out;
     ObjectInputStream in;
     String message;
@@ -26,7 +26,7 @@ public class Client {
             //3: Communicating with the server
             do {
                 try {
-                	// File requests to the server
+                    // File requests to the server
                     message = (String)in.readObject();
                     System.out.println("server>" + message);
                     sendEncryptedMessage("Hi my server");
