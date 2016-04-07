@@ -50,7 +50,7 @@ public class Client implements Runnable {
     public void run() {
         
         try { 
-            openSocket();
+            createSocket();
             getID();
             while(!isTerminated()) {
                 requestFile();
@@ -61,14 +61,14 @@ public class Client implements Runnable {
         }
     }
 
-    private void openSocket() throws IOException {
+    private void createSocket() throws IOException {
        
         try {
             sock = new Socket(hostName, port);
             in = new DataInputStream(sock.getInputStream());
             out = new DataOutputStream(sock.getOutputStream());    
         } catch (IOException io) {
-            throw new RuntimeException("Cannot connect to " + hostName + ":" + port, io);
+            throw new RuntimeException("Cannot connect server " + hostName + " at " + port, io);
         }
     }
 
@@ -76,7 +76,7 @@ public class Client implements Runnable {
      
         String id;
         while(crypt == null) {
-            id = prompt("Who are you? ");
+            id = prompt("Enter client ID: ");
             crypt = Server.getClients().get(id);
             if (crypt == null) {
                 System.out.println("Try again");
@@ -117,13 +117,13 @@ public class Client implements Runnable {
             throw new RuntimeException("Error closing socket", e);
         }
     }
-/*
-    private void requestFile() throws IOException {
-        String file = prompt("Enter file name or 'FINISHED' to terminate:");
 
-        if (file.toLowerCase().equals("finished")) {
+    private void requestFile() throws IOException {
+        String file = prompt("Enter file name or 'terminate' to terminate:");
+
+        if (file.equals("terminate")) {
             write(ClientState.FINISHED);
-            stop();
+            terminate();
             return;
         }
 
@@ -140,7 +140,7 @@ public class Client implements Runnable {
         int size = in.readInt();
         byte[] encrypted = new byte[size];
         in.readFully(encrypted);
-        byte[] decrypted = tea.decrypt(encrypted);
+        byte[] decrypted = crypt.decrypt(encrypted);
         System.out.println("File size (bytes): " + decrypted.length);
         String name = prompt("Enter name to save file as: ");
 
@@ -165,7 +165,7 @@ public class Client implements Runnable {
 
     private void write(String message) throws IOException {
         System.out.println("Writing message to server.");
-        byte[] encrypted = tea.encrypt(message.getBytes());
+        byte[] encrypted = crypt.encrypt(message.getBytes());
         out.writeInt(encrypted.length);
         out.write(encrypted);
         out.flush();
@@ -182,9 +182,8 @@ public class Client implements Runnable {
         byte[] bytes = new byte[size];
         in.readFully(bytes);
         if (decrypt) {
-            bytes = this.tea.decrypt(bytes);
+            bytes = crypt.decrypt(bytes);
         }
         return new String(bytes).trim();
     }
-*/
 }	

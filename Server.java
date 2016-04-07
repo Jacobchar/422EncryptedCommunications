@@ -47,7 +47,7 @@ public class Server {
 
 	public void run() {
 
-		openServerSockets();
+		createServerSockets();
 		while(!isTerminated()) {
 			try {
 				Socket sock = servSocket.accept();
@@ -75,9 +75,9 @@ public class Server {
 		}
 	}
 
-	private void openServerSockets() {
+	private void createServerSockets() {
         try {
-            System.out.println("Starting server on port " + this.port);
+            System.out.println("Starting server through port number " + this.port);
             this.servSocket = new ServerSocket(this.port);
         } catch (IOException e) {
             throw new RuntimeException("Cannot open port " + this.port, e);
