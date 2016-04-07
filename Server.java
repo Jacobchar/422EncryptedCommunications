@@ -4,88 +4,84 @@ import java.net.*;
 
 /*  The following code heavily relies on an example found at: 
  *  http://stackoverflow.com/questions/1776457/java-client-server-application-with-sockets
- *  The work, however, is still all my own. 
+ *  The work, however, is still all my own.
  */
 
 public class Server {
 
-	private ServerSocket servSocket;;
-	private Socket connection = null;
-	private ObjectOutputStream out;
-	private ObjectOutputStream in; 
-	private String message;
-
-	public Server() {}
-
-	void run() {
-
-		try {
-			// ServerSocket(int port, int backlog)
-			// Backlog -> requested maximum length of the queue of incoming connections
-			servSocket = new ServerSocket(16000, 10);
-			System.out.println("Waiting for connection . . .");
-			connection = servSocket.accept();
-			System.out.println("Connection received from " + connection.getInetAddress().getHostName());
-
-			// Get Input and Output streams
-			out = new ObjectOutputStream(connection.getOutputStream());
-			out.flush();
-			in = new ObjectOutputStream(connection.getInputStream());
-			sendEncryptedMessage("Connection Successful");
-
-			do {
-				try {
-					// Receive file requests
-					message = (String) in.readobject();
-					System.out.println("client>" + message);
-					
-					// Decrypt here
-
-					// Encrypt file and send to client here
-
-					// Terminate condition
-					if(message.equals("terminate")) {
-						sendEncryptedMessage("Terminated");
-					}
-				} catch (ClassNotFoundException classnot) {
-					System.err.println("Data improperly received");
-				}
-			}
-
-			while(!message.equals("terminate")) {}
-
-		} catch (IOException io) {
-			io.printStackTrace();
-		}
-		// Now we close the connection
-		finally {
-
-			try {
-				in.close();
-				out.close();
-				servSocket.colse();
-			} catch (IOException io) {
-				io.printStackTrace();
-			}
-		}
-	}
-
-	private void sendEncryptedMessage(String msg) {
-
-		try {
-			out.writeObject(msg);
-			out.flush;
-			System.out.println("server>" + msg);
-		} catch (IOException io) {
-			io.printStackTrace();
-		}
-	}
+	private ServerSocket servSocket;
+	private int port;
+	private boolean terminate;
+	private static Map<String, Crypto> clients;
 
 	public void main(String args[]) {
 
-		Server serv = new Server();
-		while(true) {
-			serv.run();
+		Server serv = new Server(16000);
+		Runtime.getRuntime().addShutdownHook(new Thread(serv::terminate));
+		serv.run();
+	}
+
+	public Server(int port) {
+
+		this.port = port;
+		this.terminate = false;
+	}
+
+	// http://www.tutorialspoint.com/java/util/collections_unmodifiablemap.htm
+	// the above helped fix one of my errors
+	public static Map<String, Crypto> getClients() {
+        if (clients == null) {
+            initializeClients();
+        }
+        return Collections.unmodifiableMap(clients);
+    }
+
+    private static void initializeClients() {
+        clients = new HashMap<>();
+        clients.put("client1", new Crypto(new long[] {46874L, 3587L, 654876L, 518679L}));
+        clients.put("client2", new Crypto(new long[] {4677L, 851212L, 121237L, 6282L}));
+        clients.put("client3", new Crypto(new long[] {98371L, 65246L, 8762428L, 16724L}));
+        clients.put("client4", new Crypto(new long[] {7983L, 12345678L, 91011L, 12131415L}));
+        clients.put("client5", new Crypto(new long[] {7897654L, 3216848L, 6432138L, 43438434L}));
+    }
+
+	public void run() {
+
+		openServerSockets();
+		while(!isTerminated()) {
+			try {
+				Socket sock = servSocket.accept();
+				new Thread(new ClientHandler(sock)).start();
+			} catch (IOException io) {
+				if (isTerminated()) {
+					return;
+				}
+				System.out.println(io.toString());
+			}
 		}
 	}
+
+	public synchronized boolean isTerminated() {
+		return terminate;
+	}
+
+	public synchronized void terminate() {
+		terminate = true;
+		try {
+			System.out.println("Shutting down");
+			servSocket.close();
+		} catch (IOException io) {
+			throw new RuntimeException("Error shutting down", io);
+		}
+	}
+
+	private void openServerSockets() {
+        try {
+            System.out.println("Starting server on port " + this.port);
+            this.servSocket = new ServerSocket(this.port);
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot open port " + this.port, e);
+    	}
+    }
+
 }

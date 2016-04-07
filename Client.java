@@ -1,72 +1,190 @@
 import java.io.*;
 import java.util.*;
 import java.net.*;
+import java.nio.file.*;
 
 /*  The following code heavily relies on an example found at: 
  *  http://stackoverflow.com/questions/1776457/java-client-server-application-with-sockets
  *  The work, however, is still all my own. 
  */
 
-public class Client {
+public class Client implements Runnable {
 
-    Socket request;
-    ObjectOutputStream out;
-    ObjectInputStream in;
-    String message;
-    public Client() {}
-    private void run() {
-        try { 
-
-            request = new Socket("localhost", 16000);
-            System.out.println("Connected to localhost in port 16000");
-            // Get Input and Output streams
-            out = new ObjectOutputStream(request.getOutputStream());
-            out.flush();
-            in = new ObjectInputStream(request.getInputStream());
-            //3: Communicating with the server
-            do {
-                try {
-                    // File requests to the server
-                    message = (String)in.readObject();
-                    System.out.println("server>" + message);
-                    sendEncryptedMessage("Hi my server");
-                    message = "bye";
-                    sendEncryptedMessage(message);
-                } catch(ClassNotFoundException classNot) {
-                    System.err.println("Data improperly received");
-                }
-            }
-            while(!message.equals("terminate"));
-        }
-        catch(UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host!");
-        } catch(IOException io) {
-            io.printStackTrace();
-        }
-        finally {
-            // Close connection
-            try {
-                in.close();
-                out.close();
-                request.close();
-            } catch(IOException io) {
-                io.printStackTrace();
-            }
-        }
-    }
-
-    private void sendEncryptedMessage(String msg) {
-        try {
-            out.writeObject(msg);
-            out.flush();
-            System.out.println("client>" + msg);
-        } catch(IOException io) {
-            io.printStackTrace();
-        }
-    }
+    private Socket sock;
+    private String hostName;
+    private int port;
+    private boolean terminate;
+    private Crypto crypt;
+    protected DataOutputStream out;
+    protected DataInputStream in;
 
     public static void main(String args[]) {
-        Client client = new Client();
+        
+        if(args.length < 2) {
+            System.out.println("Use: java Client hostname port#\n");
+            System.exit(1);
+        }
+
+        String hostName = args[0];
+        int port = 0;
+
+        try {
+            port = Integer.parseUnsignedInt(args[1]);
+        } catch(NumberFormatException e) {
+            System.out.println("Use: java Client hostname port#");
+            System.exit(1);
+        }
+
+        Client client = new Client(hostName, port);
+        Runtime.getRuntime().addShutdownHook(new Thread(client::terminate));
         client.run();
     }
+
+    public Client(String hostName, int port) {
+     
+        this.hostName = hostName;
+        this.port = port;
+        this.terminate = false;
+    }
+
+    public void run() {
+        
+        try { 
+            openSocket();
+            getID();
+            while(!isTerminated()) {
+                requestFile();
+            }
+        } catch(IOException io) {
+            System.out.println("Could not process request");
+            System.exit(1);
+        }
+    }
+
+    private void openSocket() throws IOException {
+       
+        try {
+            sock = new Socket(hostName, port);
+            in = new DataInputStream(sock.getInputStream());
+            out = new DataOutputStream(sock.getOutputStream());    
+        } catch (IOException io) {
+            throw new RuntimeException("Cannot connect to " + hostName + ":" + port, io);
+        }
+    }
+
+    private void getID() throws IOException {
+     
+        String id;
+        while(crypt == null) {
+            id = prompt("Who are you? ");
+            crypt = Server.getClients().get(id);
+            if (crypt == null) {
+                System.out.println("Try again");
+            }
+        }
+    }
+
+    private String prompt(String msg) throws IOException {
+     
+        System.out.println(msg);
+        BufferedReader r = new BufferedReader(new InputStreamReader(System.in));
+        return r.readLine();
+    }
+
+    public synchronized boolean isTerminated() {
+        return terminate;
+    }
+
+    public synchronized void terminate() throws IOException {
+        if (isTerminated()) {
+            return;
+        }
+
+        terminate = true;
+        
+        try {
+            System.out.println("Closing socket.");
+            if (in != null) {
+                in.close();
+            }
+            if (out != null) {
+                out.close();
+            }
+            if (sock != null) {
+                sock.close();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error closing socket", e);
+        }
+    }
+/*
+    private void requestFile() throws IOException {
+        String file = prompt("Enter file name or 'FINISHED' to terminate:");
+
+        if (file.toLowerCase().equals("finished")) {
+            write(ClientState.FINISHED);
+            stop();
+            return;
+        }
+
+        write(file);
+        String response = read();
+        System.out.println(response);
+        if (response.equals(ClientState.FOUND)) {
+            saveFile();
+        }
+    }
+
+    private void saveFile() throws IOException {
+        System.out.println("Reading file from server.");
+        int size = in.readInt();
+        byte[] encrypted = new byte[size];
+        in.readFully(encrypted);
+        byte[] decrypted = tea.decrypt(encrypted);
+        System.out.println("File size (bytes): " + decrypted.length);
+        String name = prompt("Enter name to save file as: ");
+
+        Path path = Paths.get(name);
+        if (!Files.isDirectory(path) && !Files.exists(path)) {
+            Files.write(path, removePadding(decrypted));
+            System.out.println("Successfully saved file.");
+        } else {
+            System.out.println("Path provided is not writeable.");
+        }
+    }
+
+    private byte[] removePadding(byte[] bytes) {
+        int i = bytes.length - 1;
+        while (i >= 0 && bytes[i] == 0) {
+            --i;
+        }
+
+        return Arrays.copyOf(bytes, i+1);
+    }
+
+
+    private void write(String message) throws IOException {
+        System.out.println("Writing message to server.");
+        byte[] encrypted = tea.encrypt(message.getBytes());
+        out.writeInt(encrypted.length);
+        out.write(encrypted);
+        out.flush();
+    }
+
+    private String read() throws IOException {
+        return read(true);
+    }
+
+    private String read(boolean decrypt) throws IOException {
+        System.out.println("Reading from server.");
+        int size = in.readInt();
+        System.out.println("Message size: " + size);
+        byte[] bytes = new byte[size];
+        in.readFully(bytes);
+        if (decrypt) {
+            bytes = this.tea.decrypt(bytes);
+        }
+        return new String(bytes).trim();
+    }
+*/
 }	
