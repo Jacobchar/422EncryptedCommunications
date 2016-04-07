@@ -1,6 +1,7 @@
 import java.io.*;
-import java.nio.*;
+import java.nio.file.*;
 import java.util.*;
+
 
 public abstract class ClientState {
 
@@ -33,7 +34,7 @@ public abstract class ClientState {
 
         public ClientState run(byte[] data) throws IOException {
             System.out.println("Authorizing client...");
-            Map.Entry<String, TinyEncrypt> result = findClient(data);
+            Map.Entry<String, Crypto> result = findClient(data);
 
             if (result == null) {
                 System.out.println("Client not authorized!");
@@ -50,10 +51,10 @@ public abstract class ClientState {
             return new Serving(handler);
         }
 
-        private Map.Entry<String, TinyEncrypt> findClient(byte[] data) {
-            Map.Entry<String, TinyEncrypt> client = null;
+        private Map.Entry<String, Crypto> findClient(byte[] data) {
+            Map.Entry<String, Crypto> client = null;
 
-            for (Map.Entry<String, TinyEncrypt> entry : FileServer.getClients().entrySet()) {
+            for (Map.Entry<String, Crypto> entry : Server.getClients().entrySet()) {
                 if (entry.getKey().equals(new String(entry.getValue().decrypt(data)).trim())) {
                     client = entry;
                 }

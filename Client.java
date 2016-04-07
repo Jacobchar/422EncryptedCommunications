@@ -29,14 +29,13 @@ public class Client implements Runnable {
         int port = 0;
 
         try {
-            port = Integer.parseUnsignedInt(args[1]);
+            port = Integer.parseInt(args[1]);
         } catch(NumberFormatException e) {
             System.out.println("Use: java Client hostname port#");
             System.exit(1);
         }
 
         Client client = new Client(hostName, port);
-        Runtime.getRuntime().addShutdownHook(new Thread(client::terminate));
         client.run();
     }
 

@@ -14,10 +14,9 @@ public class Server {
 	private boolean terminate;
 	private static Map<String, Crypto> clients;
 
-	public void main(String args[]) {
+	public static void main(String args[]) {
 
 		Server serv = new Server(16000);
-		Runtime.getRuntime().addShutdownHook(new Thread(serv::terminate));
 		serv.run();
 	}
 

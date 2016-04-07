@@ -6,7 +6,7 @@ public class ClientHandler implements Runnable {
     protected Socket socket;
     protected boolean stop;
     protected String clientId;
-    protected TinyEncrypt tea;
+    protected Crypto tea;
     protected DataOutputStream out;
     protected DataInputStream in;
 
@@ -91,7 +91,7 @@ public class ClientHandler implements Runnable {
         this.clientId = clientId;
     }
 
-    public void setTea(TinyEncrypt tea) {
+    public void setTea(Crypto tea) {
         this.tea = tea;
     }
 
