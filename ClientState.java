@@ -2,6 +2,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
+// Help from: http://www.di.ase.md/~aursu/ClientServerThreads.html
 
 public abstract class ClientState {
 
@@ -39,7 +40,7 @@ public abstract class ClientState {
             if (result == null) {
                 System.out.println("Client not authorized!");
                 handler.write(NOT_AUTHORIZED.getBytes()); // write this unencrypted
-                this.handler.stop();
+                this.handler.terminate();
                 return null;
             }
 
@@ -74,7 +75,7 @@ public abstract class ClientState {
             String message = handler.decrypt(bytes);
             if (message.equals(FINISHED)) {
                 System.out.println("Client terminated session.");
-                this.handler.stop();
+                this.handler.terminate();
                 return null;
             } else {
                 Path path = Paths.get(message);
