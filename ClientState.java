@@ -4,6 +4,10 @@ import java.util.*;
 
 // Help from: http://www.di.ase.md/~aursu/ClientServerThreads.html
 
+/* This code sets the state of the various clients and tells the handler the
+ * situation of the client */
+
+/* Jacob Charlebois, February 2016 */
 public abstract class ClientState {
 
     public static final String NOT_AUTHORIZED = "ACCESS DENIED";

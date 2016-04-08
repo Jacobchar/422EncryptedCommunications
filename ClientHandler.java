@@ -1,56 +1,61 @@
 import java.io.*;
 import java.net.*;
 
+// Help from: http://www.di.ase.md/~aursu/ClientServerThreads.html
+
+/* THis code handles the clients communicating with the server and encrypts/decrypts the data */
+
+/* Jacob Charlebois, February 2016 */
 public class ClientHandler implements Runnable {
 
     protected Socket socket;
-    protected boolean stop;
-    protected String clientId;
-    protected Crypto tea;
+    protected boolean terminate;
+    protected String client;
+    protected Crypto crypt;
     protected DataOutputStream out;
     protected DataInputStream in;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
-        this.stop = false;
+        this.terminate = false;
     }
 
     public void run() {
         try {
             ClientState state = new ClientState.Authorizing(this);
-            this.in = new DataInputStream(socket.getInputStream());
-            this.out = new DataOutputStream(socket.getOutputStream());
-            while(!isStopped()) {
+            in = new DataInputStream(socket.getInputStream());
+            out = new DataOutputStream(socket.getOutputStream());
+            while(!isTerminated()) {
                 state = state.run(read());
             }
         } catch (IOException e) {
             System.out.println(e.toString());
         } finally {
-            this.stop();
+            terminate();
         }
 
     }
 
-    public synchronized boolean isStopped() {
-        return this.stop;
+    public synchronized boolean isTerminated() {
+        return terminate;
     }
 
-    public synchronized void stop() {
-        if (this.isStopped()) {
+    public synchronized void terminate() {
+        if (isTerminated()) {
             return;
         }
 
-        System.out.println("Disconnecting client: " + clientId);
-        this.stop = true;
+        System.out.println("Disconnecting " + client);
+        terminate = true;
         try {
-            if (this.in != null) {
-                this.in.close();
+            if (in != null) {
+                in.close();
             }
-            if (this.out != null) {
-                this.out.close();
+            if (out != null) {
+                out.close();
             }
-            if (this.socket != null) {
-                this.socket.close();
+            if (socket != null) {
+                socket.close();
             }
         } catch(IOException e) {
             System.out.println(e.toString());
@@ -75,24 +80,24 @@ public class ClientHandler implements Runnable {
 
     public byte[] encrypt(String message) {
         byte[] b = message.getBytes();
-        return tea.encrypt(b);
+        return crypt.encrypt(b);
     }
 
     public byte[] encrypt(byte[] message) {
-        return tea.encrypt(message);
+        return crypt.encrypt(message);
     }
 
     public String decrypt(byte[] encrypted) {
-        byte[] decrypted = this.tea.decrypt(encrypted);
+        byte[] decrypted = crypt.decrypt(encrypted);
         return new String(decrypted).trim();
     }
 
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
+    public void setClientId(String client) {
+        this.client = client;
     }
 
-    public void setTea(Crypto tea) {
-        this.tea = tea;
+    public void setcrypt(Crypto crypt) {
+        this.crypt = crypt;
     }
 
 }

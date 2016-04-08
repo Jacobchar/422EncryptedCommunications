@@ -7,6 +7,9 @@ import java.net.*;
  *  The work, however, is still all my own.
  */
 
+/* This code creates and initiliazes the sere=ver for multiple clients, requires the client to authenticate
+ * Themselves before allowing file requests.
+/* Jacob Charlebois, February 2016 */
 public class Server {
 
 	private ServerSocket servSocket;
@@ -27,7 +30,7 @@ public class Server {
 	}
 
 	// http://www.tutorialspoint.com/java/util/collections_unmodifiablemap.htm
-	// the above helped fix one of my errors
+	// used code from the above website
 	public static Map<String, Crypto> getClients() {
         if (clients == null) {
             initializeClients();

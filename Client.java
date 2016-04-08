@@ -8,6 +8,12 @@ import java.nio.file.*;
  *  The work, however, is still all my own. 
  */
 
+
+/* Client code that creates the connection between client and server
+ * also sets up terminal and lets the client request files from the server
+ * and save them under a new path */
+
+/* Jacob Charlebois, February 2016 */
 public class Client implements Runnable {
 
     private Socket sock;
@@ -162,9 +168,9 @@ public class Client implements Runnable {
     }
 
 
-    private void write(String message) throws IOException {
+    private void write(String msg) throws IOException {
         System.out.println("Writing message to server.");
-        byte[] encrypted = crypt.encrypt(message.getBytes());
+        byte[] encrypted = crypt.encrypt(msg.getBytes());
         out.writeInt(encrypted.length);
         out.write(encrypted);
         out.flush();
